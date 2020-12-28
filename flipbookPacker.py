@@ -28,10 +28,13 @@ Stagger Packing if using 192 or 256 frames:
 	Frame[13-16] = Image004.RGBA
 '''
 
-import PIL
-from PIL import Image
 import math
 import os
+import tkinter as tk
+from tkinter import filedialog
+
+import PIL
+from PIL import Image
 
 #
 # execution variables start
@@ -42,7 +45,7 @@ pilFormat = 'tiff'		# image format to save out as. if tif format, you need 2 f's
 compress = 'tiff_lzw'	# tif compression if using tif format.
 atlasRow = 6 			# total texture atlas columns. only used for atlasLayout().
 atlasCol = 6			# total texture atlas rows. only used for atlasLayout().
-
+numFiles = 0
 if pilFormat == 'tiff':
 	saveFormat = 'tif'
 else:
@@ -50,6 +53,70 @@ else:
 
 # execution variables end
 #
+
+##-- UI defs START --
+def getFolder():
+	folderChosen = filedialog.askdirectory()
+
+	print ("FOLDER CHOSEN IS: " + folderChosen)
+	if folderChosen:
+		if not folderChosen[-1]=='/':
+			folderChosen = folderChosen +'/'
+		folderNameVariable.set(folderChosen)
+		path, dirs, files = next(os.walk(folderChosen))
+		global numFiles
+		numFiles = len(files)
+		fileCountLabel.config(text="This folder has: " +  str(numFiles) + " files")
+		print (algorithmVariable.get())
+		print (numRowsVariable.get())
+
+def doPack():
+	algo = algorithmVariable.get()
+	imgPath = folderNameVariable.get()
+	if not os.path.exists(imgPath):
+		statusVariable.set("SELECT A FOLDER!!!")
+		return
+	global imgFormat
+	imgFormat = 'tif'
+	global pilFormat 
+	pilFormat = pilFormatVariable.get()
+	
+	outputFile = ""
+	if algo == "atlasLayout" :
+		rows = int(numRowsVariable.get())
+		cols = int(numColsVariable.get())
+		#if we're doing atlasPack and rows or variables isnt set, make it a square
+		if (rows == 0 or cols == 0):
+			print (numFiles)
+			ans = 0
+			while ans*ans < numFiles:
+				ans += 1
+			rows = ans
+			numRowsVariable.set(ans)
+			cols = ans
+			numColsVariable.set(ans)
+		outputFile = atlasLayout(rows, cols, imgPath)
+	elif algo == "staggerPack":
+		outputFile = staggerPack(imgPath)
+	else:
+		outputFile = superPack(imgPath)
+	print ("ALGORITHM IS: " + algorithmVariable.get())
+	print ("NUM ROWS IS: " + numRowsVariable.get())
+	print ("NUM COLS IS: " + numColsVariable.get())
+	print ("FOLDERNAME IS " + folderNameVariable.get())
+
+	if not outputFile is None:
+		statusVariable.set("Pack successful:")
+		outputPathVariable.set(outputFile)
+	else:
+		outputPathVariable.set("NONE")
+
+def openOutput():
+	if outputPathVariable.get()[0] =='<':
+		statusVariable.set("Please Pack first")
+	else:
+		os.startfile(outputPathVariable.get())
+## UI defs END
 
 def compareDimension(image, imPath, width, height):
 	img = Image.open(imPath + image)
@@ -76,6 +143,7 @@ def atlasLayout(row, col, imPath):
 
 	if len(images) < 1:
 		print('No images in folder to Atlas Layout')
+		statusVariable.set('No images in folder to Atlas Layout')
 	else:
 		name = images[0].split('.')
 		exportPath = imPath + '_texture/'
@@ -122,12 +190,14 @@ def atlasLayout(row, col, imPath):
 			newImg.save(atlasTex, pilFormat)
 
 		print(atlasTex)
+		return atlasTex
 
 def staggerPack(imPath):
 	images = os.listdir(imPath)
 
 	if len(images) < 1:
 		print('No images in folder to Stagger Pack')
+		statusVariable.set('No images in folder to Stagger Pack')
 	else:
 		name = images[0].split('.')
 		exportPath = imPath + '_texture/'
@@ -139,7 +209,8 @@ def staggerPack(imPath):
 		imagesToProcess = getImages(images, imPath, w, h)
 
 		if len(imagesToProcess) != 192 and len(imagesToProcess) != 256:
-			print('Super Packing requires sequences of 192 for RGB or 256 for RGBA packing.')
+			print('Stagger Packing requires sequences of 192 for RGB or 256 for RGBA packing.')
+			statusVariable.set('Stagger Packing requires sequences of 192 for RGB or 256 for RGBA packing.')
 		else:
 			if os.path.exists(exportPath) == False:
 				os.makedirs(exportPath)
@@ -222,6 +293,7 @@ def staggerPack(imPath):
 				newImg.save(atlasTex, pilFormat)
 
 			print(atlasTex)
+			return atlasTex
 
 def superPack(imPath):
 	images = os.listdir(imPath)
@@ -240,6 +312,7 @@ def superPack(imPath):
 
 		if len(imagesToProcess) != 192 and len(imagesToProcess) != 256:
 			print('Super Packing requires sequences of 192 for RGB or 256 for RGBA packing.')
+			statusVariable.set('Super Packing requires sequences of 192 for RGB or 256 for RGBA packing.')
 		else:
 			if os.path.exists(exportPath) == False:
 				os.makedirs(exportPath)
@@ -323,11 +396,101 @@ def superPack(imPath):
 				newImg.save(atlasTex, pilFormat)
 
 			print(atlasTex)
+			return atlasTex
+# START UI STUFF
+
+root = tk.Tk()
+algorithmList = ["atlasLayout", "staggerPack", "superPack"]
+
+root.title("Flipbook Packer")
+root.geometry("600x600")
+
+# Select Folder Button
+selectFolderButton = tk.Button(root, text="Select Folder", fg="white", bg = "#263D42", command=getFolder)
+selectFolderButton.grid(row=0,column=1)
+
+# The selected folder
+folderNameVariable = tk.StringVar(root)
+folderLabel = tk.Label(root,textvariable=folderNameVariable, bg="#A1FFE3")
+folderLabel.grid(row=0,column=0)
+folderLabel.config(text="No Folder Currently Selected")
+
+# Number of files in this folder
+fileCountLabel = tk.Label(root, bg="#FFEE6F")
+fileCountLabel.grid(row=0,column=2)
+fileCountLabel.config(text="")
+
+# Packing Algorithm Label
+algorithmLabel = tk.Label(root, text="Packing Algorithm", bg="#A1FFE3")
+algorithmLabel.grid(row=1,column=0)
+
+# Packing Algorithm dropdown 
+algorithmVariable = tk.StringVar(root)
+algorithmVariable.set(algorithmList[0])
+algorithmOpt = tk.OptionMenu(root,algorithmVariable, *algorithmList)
+algorithmOpt.grid(row=1,column=1)
+
+# Num Rows Label
+numRowsLabel = tk.Label(root,text="Num Rows (if using atlasPack): ", bg="#A1FFE3")
+numRowsLabel.grid(row=2,column=0)
+
+# Num Rows Entry
+numRowsVariable = tk.StringVar(root, value='0')
+numRowsEntry = tk.Entry(root,textvariable=numRowsVariable,justify= 'right')
+numRowsEntry.grid(row=2, column=1)
+
+# Num Cols Label
+numColsLabel = tk.Label(root,text="Num Cols (if using atlasPack): ", bg="#A1FFE3")
+numColsLabel.grid(row=3,column=0)
+
+# Num Cols Entry
+numColsVariable = tk.StringVar(root, value='0')
+numColsEntry = tk.Entry(root,textvariable=numColsVariable,justify= 'right')
+numColsEntry.grid(row=3, column=1)
+
+# Img Format Label
+imgFormatLabel = tk.Label(root,text="Image Foramt (Input): ", bg="#A1FFE3")
+imgFormatLabel.grid(row=4,column=0)
+
+# Img Format Entry
+imgFormatVariable = tk.StringVar(root, value='tif')
+imgFormatEntry = tk.Entry(root, textvariable=imgFormatVariable)
+imgFormatEntry.grid(row=4, column=1)
+
+# Img Format Label
+pilFormatLabel = tk.Label(root,text="Image Foramt (Output): ", bg="#A1FFE3")
+pilFormatLabel.grid(row=5,column=0)
+
+# Img Format Entry
+pilFormatVariable = tk.StringVar(root, value='tiff')
+pilFormatEntry = tk.Entry(root, textvariable=pilFormatVariable)
+pilFormatEntry.grid(row=5, column=1)
+
+# Status  Label
+statusVariable = tk.StringVar(root)
+StatusLabel = tk.Label(root,textvariable=statusVariable, bg="#c242f5")
+StatusLabel.grid(row=6,column=0)
+
+#Output Path
+outputPathVariable = tk.StringVar(root, value='<OUTPUT GOES HERE>')
+outputPathEntry= tk.Entry(root, state="readonly", textvariable=outputPathVariable)
+outputPathEntry.grid(row=6, column=1)
+
+#Open Output
+openOutputButton = tk.StringVar(root, value='...')
+openOutputButton = tk.Button(text="...", fg="white", bg = "#263D42", command=openOutput)
+openOutputButton.grid(row=6, column=2)
+
+#Pack button
+packButton = tk.Button(root, text="PACK", fg="white", bg = "#263D42", command=doPack)
+packButton.grid(row=7,column=1)
+
+root.mainloop()
 
 #
 # Uncomment out the packing function you wish to use
 
-atlasLayout(atlasRow, atlasCol, seqPath)
+#atlasLayout(atlasRow, atlasCol, seqPath)
 
 #staggerPack(seqPath)
 

@@ -1,3 +1,9 @@
+I took the code from https://github.com/stylerhall/flipbookPacker and added a UI.
+
+# HOW TO USE: 
+
+python 
+
 # Flipbook Packer
 Python tool for VFX artists to aide in different methods of texture atlas'ing and channel packing.
 
