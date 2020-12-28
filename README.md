@@ -1,8 +1,20 @@
 I took the code from https://github.com/stylerhall/flipbookPacker and added a UI.
 
-# HOW TO USE: 
+I take no credit for the packing algorithms employed, but simply for adding a janky UI.
 
-python 
+# HOW TO USE: 
+open a command window and type
+```
+pip install pillow (IF YOU HAVEN'T INSTALLED PILLOW YET
+python flipbookpacker.py
+```
+or simply execute (double click)
+```
+flipbookPacker.bat
+```
+that comes with it
+
+If either row or col is set to 0 and atlas pack is used, I just square pack (row col = same num)
 
 # Flipbook Packer
 Python tool for VFX artists to aide in different methods of texture atlas'ing and channel packing.
