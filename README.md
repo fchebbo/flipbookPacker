@@ -3,6 +3,9 @@ I took the code from https://github.com/stylerhall/flipbookPacker and added a UI
 I take no credit for the packing algorithms employed, but simply for adding a janky UI.
 
 # HOW TO USE: 
+
+ **NOTE: PYTHON MUST BE INSTALLED (TESTED WITH 3.9.1)**
+
 open a command window and type
 ```
 pip install pillow (IF YOU HAVEN'T INSTALLED PILLOW YET
